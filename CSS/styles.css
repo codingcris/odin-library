@@ -124,3 +124,9 @@ footer {
   flex-direction: column;
   gap: 1rem;
 }
+
+#addBook {
+  padding: 1rem;
+  background-color: green;
+  color: white;
+}
