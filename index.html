@@ -37,7 +37,7 @@
           Reading?</label
         >
         <div id="formButtons">
-          <button type="reset" onclick="cancelForm()">Cancel</button>
+          <button type="reset" id="resetFormButton">Cancel</button>
           <button id="submitButton">Save</button>
         </div>
       </form>
@@ -52,10 +52,10 @@
           <dt>Finished Reading?:</dt>
           <dd id="readInfo"></dd>
         </dl>
-        <button onclick="closeInfo()">Close</button>
+        <button id="closeInfoBttn">Close</button>
       </div>
 
-      <button onclick="showForm()" id="addBook">Add Book</button>
+      <button id="addBook">Add Book</button>
     </main>
     <footer>
       <p>The Odin Project</p>

@@ -1,207 +1,251 @@
-const LIBRARY = [];
-
-const book = {
-  init(title, author, pages, read) {
-    this.title = title;
-    this.author = author;
-    this.pages = pages;
-    this.read = read;
-    return this;
-  },
-  info() {
-    return `${this.name} by ${this.author}, ${this.pages} pages. ${
-      this.read ? "Read." : "Not read yet."
-    }`;
-  },
-};
-
-function Book() {
-  const b = Object.create(book);
-  b.init(...arguments);
-  return b;
-}
-
-// Add a book to the library and display it
-function addBookToLibrary(book) {
-  LIBRARY.push(book);
-  let bookIndex = LIBRARY.length - 1;
-  let bookCard = createBookCard(book);
-  bookCard.setAttribute("data-book-index", bookIndex);
-  displayBook(bookCard);
-}
-
-// Create a book card element
-function createBookCard(book) {
-  let bookCard = document.createElement("div");
-  bookCard.classList.add("bookCard");
-
-  let bookTitle = document.createElement("h2");
-  bookTitle.style.margin = "0";
-  bookTitle.textContent = book.title;
-  bookTitle.style.maxWidth = "90%";
-  bookTitle.style.height = "60%";
-  bookTitle.style.lineHeight = "1.2";
-  bookTitle.classList.add("bookTitle");
-
-  let bookAuthor = document.createElement("h3");
-  bookAuthor.textContent = "By\n" + book.author;
-  bookAuthor.style.maxWidth = "90%";
-  bookAuthor.style.margin = "0";
-  bookAuthor.classList.add("bookAuthor");
-
-  bookCard.appendChild(bookTitle);
-  bookCard.appendChild(bookAuthor);
-
-  bookCard.style.padding = "0.5rem";
-  bookCard.style.backgroundColor = "#ffdaab";
-  bookCard.style.height = "100%";
-  bookCard.style.width = "100%";
-  bookCard.style.textAlign = "center";
-  bookCard.style.position = "relative";
-
-  return bookCard;
-}
-
-// Display a book card
-function displayBook(bookCard) {
-  let book = LIBRARY[bookCard.getAttribute("data-book-index")];
-  if (book.displayed) return;
-
-  let bookDisplay = document.getElementById("myBooks");
-  let bookOptions = createBookOptions(book);
-  bookCard.appendChild(bookOptions);
-  bookDisplay.appendChild(bookCard);
-  book.displayed = true;
-}
-
-// Create book options (Delete, Info, Read)
-function createBookOptions(book) {
-  let bookOptions = document.createElement("div");
-  bookOptions.classList.add("bookOptions");
-
-  let remove = document.createElement("button");
-  remove.textContent = "Delete";
-  remove.addEventListener("click", removeBook);
-
-  let info = document.createElement("button");
-  info.textContent = "Info";
-  info.addEventListener("click", bookInfo);
-
-  let read = document.createElement("input");
-  read.type = "checkbox";
-  if (book.read) {
-    read.checked = true;
-  }
-  read.addEventListener("change", bookRead);
-
-  bookOptions.appendChild(remove);
-  bookOptions.appendChild(info);
-  bookOptions.appendChild(read);
-
-  return bookOptions;
-}
-
-// Remove a book from the library
-function removeBook(event) {
-  let button = event.target;
-  let bookCard = button.parentNode.parentNode;
-  let bookIndex = Number(bookCard.getAttribute("data-book-index"));
-  let bookDisplay = document.getElementById("myBooks");
-  let cards = Array.from(bookDisplay.children);
-
-  // Decrease the index of all bookCards that come after the deleted book
-  for (let book of cards.slice(bookIndex + 1)) {
-    let oldIdx = Number(book.getAttribute("data-book-index"));
-    book.setAttribute("data-book-index", --oldIdx);
+const EventEmitter = (function () {
+  function EventEmitter() {
+    this.listeners = {};
   }
 
-  // remove book from LIBRARY and its bookCard from the bookDisplay
-  LIBRARY.splice(bookIndex, 1);
-  bookDisplay.children[bookIndex].remove();
-}
+  EventEmitter.prototype.on = function (event, callback) {
+    if (!this.listeners[event]) {
+      this.listeners[event] = [];
+    }
+    this.listeners[event].push(callback);
+    return () => {
+      this.off(event, callback);
+    };
+  };
 
-// Show the new book form
-function showForm() {
-  let form = document.getElementById("newBookForm");
-  let overlay = document.getElementById("dim-overlay");
-  overlay.style.visibility = "visible";
-  form.style.display = "flex";
-  form.style.flexDirection = "column";
-  form.style.gap = "1rem";
-  form.style.visibility = "visible";
-}
+  EventEmitter.prototype.off = function (event, callback) {
+    if (!this.listeners[event]) return;
 
-// Cancel and hide the new book form
-function cancelForm() {
-  let form = document.getElementById("newBookForm");
-  form.style.display = "none";
-  let overlay = document.getElementById("dim-overlay");
-  overlay.style.visibility = "hidden";
-}
+    this.listeners[event] = this.listeners[event].filter(
+      (listener) => listener !== callback
+    );
+  };
 
-// Submit a new book
-function submitBook(event) {
-  event.preventDefault();
-  let title = document.getElementById("title").value;
-  let author = document.getElementById("author").value;
-  let pages = document.getElementById("pages").value;
-  let read = document.getElementById("read").checked;
-  let book = Book(title, author, pages, read);
-  let form = document.getElementById("newBookForm");
-  form.reset();
-  addBookToLibrary(book);
-  cancelForm();
-}
+  EventEmitter.prototype.emit = function (event, data) {
+    if (!this.listeners[event]) return;
 
-// Display book information
-function bookInfo(event) {
-  let button = event.target;
-  let bookCard = button.parentNode.parentNode;
-  let bookIndex = Number(bookCard.getAttribute("data-book-index"));
-  let book = LIBRARY[bookIndex];
+    this.listeners[event].forEach((callback) => callback(data));
+  };
 
-  // Dim the app with overlay
-  let overlay = document.getElementById("dim-overlay");
-  overlay.style.visibility = "visible";
+  return EventEmitter;
+})();
 
-  // Bring book Info to the front
-  let infoDisplay = document.getElementById("infoDisplay");
-  infoDisplay.style.visibility = "visible";
+var eventBus = new EventEmitter();
 
-  let titleDisplay = document.getElementById("titleInfo");
-  titleDisplay.textContent = book.title;
-
-  let authorDisplay = document.getElementById("authorInfo");
-  authorDisplay.textContent = book.author;
-
-  let pagesDisplay = document.getElementById("pagesInfo");
-  pagesDisplay.textContent = book.pages;
-
-  let readDisplay = document.getElementById("readInfo");
-  readDisplay.textContent = book.read;
-}
-
-// Close the book information display
-function closeInfo() {
-  let overlay = document.getElementById("dim-overlay");
-  overlay.style.visibility = "hidden";
-  let infoDisplay = document.getElementById("infoDisplay");
-  infoDisplay.style.visibility = "hidden";
-}
-
-// Toggle the read status of a book
-function bookRead(event) {
-  let checkbox = event.target;
-  let bookCard = checkbox.parentNode.parentNode;
-  let bookIndex = Number(bookCard.getAttribute("data-book-index"));
-  let book = LIBRARY[bookIndex];
-
-  if (checkbox.checked) {
-    book.read = true;
-  } else {
-    book.read = false;
+const LIBRARY = (function (eventEmitter) {
+  const _LIBRARY = [];
+  const _book = {
+    init(title, author, pages, read) {
+      this.title = title;
+      this.author = author;
+      this.pages = pages;
+      this.read = read;
+      return this;
+    },
+    info() {
+      return `${this.title} by ${this.author}, ${this.pages} pages. ${
+        this.read ? "Read." : "Not read yet."
+      }`;
+    },
+  };
+  function _Book() {
+    const b = Object.create(_book);
+    b.init(...arguments);
+    return b;
   }
-}
+  function addBook(book) {
+    _LIBRARY.push(book);
+    eventEmitter.emit("bookAdded", book);
+  }
 
-let form = document.getElementById("newBookForm");
-form.addEventListener("submit", submitBook);
+  function removeBook(book) {
+    let index = _LIBRARY.indexOf(book);
+    if (index !== -1) {
+      _LIBRARY.splice(index, 1);
+    }
+    eventEmitter.emit("bookRemoved", book);
+  }
+
+  function registerBook(bookInfo) {
+    let book = _Book(
+      bookInfo.title,
+      bookInfo.author,
+      bookInfo.pages,
+      bookInfo.read
+    );
+    book.id = _LIBRARY.length;
+    addBook(book);
+  }
+
+  function getBook(bookId) {
+    return _LIBRARY[bookId];
+  }
+  return { addBook, removeBook, registerBook, getBook };
+})(eventBus);
+
+const LIBRARY_DISPLAY = (function (eventEmitter) {
+  let _bookDisplay = document.getElementById("myBooks");
+  let _newBookForm = document.getElementById("newBookForm");
+  let _overlay = document.getElementById("dim-overlay");
+  let _infoDisplay = document.getElementById("infoDisplay");
+  let _resetFormButton = document.getElementById("resetFormButton");
+  let _addBookButton = document.getElementById("addBook");
+  let _closeInfoBttn = document.getElementById("closeInfoBttn");
+
+  function initialize() {
+    eventEmitter.on("bookAdded", _render.bind(null, "add"));
+    eventEmitter.on("bookRemoved", _render.bind(null, "remove"));
+
+    _newBookForm.addEventListener("submit", _submitBook);
+    _resetFormButton.addEventListener("click", _cancelForm);
+    _addBookButton.addEventListener("click", _showForm);
+    _closeInfoBttn.addEventListener("click", _closeInfo);
+  }
+
+  function _render(action, book) {
+    if (action === "add") {
+      let bookCard = _createBookCard(book);
+      _bookDisplay.appendChild(bookCard);
+    } else if (action === "remove") {
+      let bookId = book.id;
+      _bookDisplay.children[bookId].remove();
+      _updateBookCardIds(bookId);
+    }
+  }
+
+  function _updateBookCardIds(startIndex) {
+    let bookCards = Array.from(_bookDisplay.children).slice(startIndex);
+
+    for (let card of bookCards) {
+      let cardId = Number(card.getAttribute("data-book-id"));
+      card.setAttribute("data-book-id", --cardId);
+    }
+  }
+
+  function _createBookCard(book) {
+    let bookCard = document.createElement("div");
+    bookCard.classList.add("bookCard");
+
+    let bookTitle = document.createElement("h2");
+    bookTitle.textContent = book.title;
+    bookTitle.classList.add("bookTitle");
+
+    let bookAuthor = document.createElement("h3");
+    bookAuthor.textContent = "By\n" + book.author;
+    bookAuthor.classList.add("bookAuthor");
+
+    let bookOptions = _createBookOptions(book);
+
+    bookCard.appendChild(bookTitle);
+    bookCard.appendChild(bookAuthor);
+    bookCard.appendChild(bookOptions);
+    bookCard.setAttribute("data-book-id", book.id);
+    return bookCard;
+  }
+
+  // Create book options (Delete, Info, Read)
+  function _createBookOptions(book) {
+    let bookOptions = document.createElement("div");
+    bookOptions.classList.add("bookOptions");
+
+    let remove = document.createElement("button");
+    remove.textContent = "Delete";
+    remove.addEventListener("click", _removeBook);
+
+    let info = document.createElement("button");
+    info.textContent = "Info";
+    info.addEventListener("click", _bookInfo);
+
+    let read = document.createElement("input");
+    read.type = "checkbox";
+    if (book.read) {
+      read.checked = true;
+    }
+    read.addEventListener("change", _bookRead);
+
+    bookOptions.appendChild(remove);
+    bookOptions.appendChild(info);
+    bookOptions.appendChild(read);
+
+    return bookOptions;
+  }
+
+  // Submit a new book
+  function _submitBook(event) {
+    event.preventDefault();
+    let title = document.getElementById("title").value;
+    let author = document.getElementById("author").value;
+    let pages = document.getElementById("pages").value;
+    let read = document.getElementById("read").checked;
+    LIBRARY.registerBook({ title, author, pages, read });
+    _newBookForm.reset();
+    _cancelForm();
+  }
+
+  function _cancelForm() {
+    _newBookForm.style.visibility = "hidden";
+    _overlay.style.visibility = "hidden";
+  }
+
+  // Show the new book form
+  function _showForm() {
+    _overlay.style.visibility = "visible";
+    _newBookForm.style.visibility = "visible";
+  }
+
+  function _bookInfo(event) {
+    let button = event.target;
+    let bookCard = button.parentNode.parentNode;
+    let bookId = Number(bookCard.getAttribute("data-book-id"));
+    let book = LIBRARY.getBook(bookId);
+
+    // Dim the app with overlay
+    _overlay.style.visibility = "visible";
+
+    // Bring book Info to the front
+    _infoDisplay.style.visibility = "visible";
+
+    let titleDisplay = document.getElementById("titleInfo");
+    titleDisplay.textContent = book.title;
+
+    let authorDisplay = document.getElementById("authorInfo");
+    authorDisplay.textContent = book.author;
+
+    let pagesDisplay = document.getElementById("pagesInfo");
+    pagesDisplay.textContent = book.pages;
+
+    let readDisplay = document.getElementById("readInfo");
+    readDisplay.textContent = book.read;
+  }
+
+  // Close the book information display
+  function _closeInfo() {
+    _overlay.style.visibility = "hidden";
+    _infoDisplay.style.visibility = "hidden";
+  }
+
+  function _removeBook(event) {
+    let button = event.target;
+    let bookCard = button.parentNode.parentNode;
+
+    let bookId = bookCard.getAttribute("data-book-id");
+    let book = LIBRARY.getBook(bookId);
+
+    LIBRARY.removeBook(book);
+  }
+
+  function _bookRead(event) {
+    let checkbox = event.target;
+    let bookCard = checkbox.parentNode.parentNode;
+    let bookId = bookCard.getAttribute("data-book-id");
+    let book = LIBRARY.getBook(bookId);
+
+    if (checkbox.checked) {
+      book.read = true;
+    } else {
+      book.read = false;
+    }
+  }
+
+  initialize();
+})(eventBus);
